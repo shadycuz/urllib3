@@ -1,10 +1,15 @@
 import json as _json
-from typing import Any, Dict, Mapping, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, Tuple, Union
 from urllib.parse import urlencode
 
 from .connection import _TYPE_BODY
 from .filepost import _TYPE_FIELDS, encode_multipart_formdata
 from .response import BaseHTTPResponse
+from .util.request import _TYPE_BODY_POSITION
+from .util.timeout import _DEFAULT_TIMEOUT
+
+if TYPE_CHECKING:
+    from .connectionpool import _TYPE_TIMEOUT
 
 __all__ = ["RequestMethods"]
 
@@ -55,7 +60,17 @@ class RequestMethods:
         headers: Optional[Mapping[str, str]] = None,
         encode_multipart: bool = True,
         multipart_boundary: Optional[str] = None,
-        **kw: Any,
+        retries: Optional[Union[bool, int]] = None,
+        redirect: bool = True,
+        assert_same_host: bool = True,
+        timeout: "_TYPE_TIMEOUT" = _DEFAULT_TIMEOUT,
+        pool_timeout: Optional[int] = None,
+        release_conn: Optional[bool] = None,
+        chunked: bool = False,
+        body_pos: Optional[_TYPE_BODY_POSITION] = None,
+        preload_content: bool = True,
+        decode_content: bool = True,
+        enforce_content_length: bool = True,
     ) -> BaseHTTPResponse:  # Abstract
         raise NotImplementedError(
             "Classes extending RequestMethods must implement "
@@ -69,8 +84,20 @@ class RequestMethods:
         body: Optional[_TYPE_BODY] = None,
         fields: Optional[_TYPE_FIELDS] = None,
         headers: Optional[Mapping[str, str]] = None,
+        encode_multipart: bool = True,
+        multipart_boundary: Optional[str] = None,
+        release_conn: Optional[bool] = None,
         json: Optional[Any] = None,
-        **urlopen_kw: Any,
+        retries: Optional[Union[bool, int]] = None,
+        preload_content: bool = True,
+        timeout: "_TYPE_TIMEOUT" = _DEFAULT_TIMEOUT,
+        redirect: bool = True,
+        assert_same_host: bool = True,
+        pool_timeout: Optional[int] = None,
+        chunked: bool = False,
+        body_pos: Optional[_TYPE_BODY_POSITION] = None,
+        decode_content: bool = True,
+        enforce_content_length: bool = True,
     ) -> BaseHTTPResponse:
         """
         Make a request using :meth:`urlopen` with the appropriate encoding of
@@ -82,6 +109,7 @@ class RequestMethods:
         :meth:`request_encode_url`, :meth:`request_encode_body`,
         or even the lowest level :meth:`urlopen`.
         """
+        # print(urlopen_kw)
         method = method.upper()
 
         urlopen_kw["request_url"] = url
@@ -101,8 +129,8 @@ class RequestMethods:
                 "utf-8"
             )
 
-        if body is not None:
-            urlopen_kw["body"] = body
+        # if body is not None:
+        #     urlopen_kw["body"] = body
 
         if method in self._encode_url_methods:
             return self.request_encode_url(
@@ -110,11 +138,39 @@ class RequestMethods:
                 url,
                 fields=fields,  # type: ignore[arg-type]
                 headers=headers,
-                **urlopen_kw,
+                body=body,
+                retries=retries,
+                timeout=timeout,
+                preload_content=preload_content,
+                release_conn=release_conn,
+                redirect=redirect,
+                assert_same_host=assert_same_host,
+                pool_timeout=pool_timeout,
+                chunked=chunked,
+                body_pos=body_pos,
+                decode_content=decode_content,
+                enforce_content_length=enforce_content_length,
             )
         else:
             return self.request_encode_body(
-                method, url, fields=fields, headers=headers, **urlopen_kw
+                method,
+                url,
+                fields=fields,
+                headers=headers,
+                encode_multipart=encode_multipart,
+                multipart_boundary=multipart_boundary,
+                body=body,
+                retries=retries,
+                timeout=timeout,
+                preload_content=preload_content,
+                release_conn=release_conn,
+                redirect=redirect,
+                assert_same_host=assert_same_host,
+                pool_timeout=pool_timeout,
+                chunked=chunked,
+                body_pos=body_pos,
+                decode_content=decode_content,
+                enforce_content_length=enforce_content_length,
             )
 
     def request_encode_url(
@@ -123,7 +179,18 @@ class RequestMethods:
         url: str,
         fields: Optional[_TYPE_ENCODE_URL_FIELDS] = None,
         headers: Optional[Mapping[str, str]] = None,
-        **urlopen_kw: str,
+        body: Optional[_TYPE_BODY] = None,
+        release_conn: Optional[bool] = None,
+        retries: Optional[Union[bool, int]] = None,
+        preload_content: bool = True,
+        timeout: "_TYPE_TIMEOUT" = _DEFAULT_TIMEOUT,
+        redirect: bool = True,
+        assert_same_host: bool = True,
+        pool_timeout: Optional[int] = None,
+        chunked: bool = False,
+        body_pos: Optional[_TYPE_BODY_POSITION] = None,
+        decode_content: bool = True,
+        enforce_content_length: bool = True,
     ) -> BaseHTTPResponse:
         """
         Make a request using :meth:`urlopen` with the ``fields`` encoded in
@@ -132,13 +199,29 @@ class RequestMethods:
         if headers is None:
             headers = self.headers
 
-        extra_kw: Dict[str, Any] = {"headers": headers}
-        extra_kw.update(urlopen_kw)
+        # extra_kw: Dict[str, Any] = {"headers": headers}
+        # extra_kw.update(urlopen_kw)
 
         if fields:
             url += "?" + urlencode(fields)
 
-        return self.urlopen(method, url, **extra_kw)
+        return self.urlopen(
+            method,
+            url,
+            headers=headers,
+            body=body,
+            retries=retries,
+            preload_content=preload_content,
+            timeout=timeout,
+            release_conn=release_conn,
+            redirect=redirect,
+            assert_same_host=assert_same_host,
+            pool_timeout=pool_timeout,
+            chunked=chunked,
+            body_pos=body_pos,
+            decode_content=decode_content,
+            enforce_content_length=enforce_content_length,
+        )
 
     def request_encode_body(
         self,
@@ -148,7 +231,18 @@ class RequestMethods:
         headers: Optional[Mapping[str, str]] = None,
         encode_multipart: bool = True,
         multipart_boundary: Optional[str] = None,
-        **urlopen_kw: str,
+        body: Optional[_TYPE_BODY] = None,
+        release_conn: Optional[bool] = None,
+        retries: Optional[Union[bool, int]] = None,
+        preload_content: bool = True,
+        timeout: "_TYPE_TIMEOUT" = _DEFAULT_TIMEOUT,
+        redirect: bool = True,
+        assert_same_host: bool = True,
+        pool_timeout: Optional[int] = None,
+        chunked: bool = False,
+        body_pos: Optional[_TYPE_BODY_POSITION] = None,
+        decode_content: bool = True,
+        enforce_content_length: bool = True,
     ) -> BaseHTTPResponse:
         """
         Make a request using :meth:`urlopen` with the ``fields`` encoded in
@@ -188,11 +282,10 @@ class RequestMethods:
         if headers is None:
             headers = self.headers
 
-        extra_kw: Dict[str, Any] = {"headers": {}}
-        body: Union[bytes, str]
+        # extra_kw: Dict[str, Any] = {"headers": {}}
 
         if fields:
-            if "body" in urlopen_kw:
+            if body is not None:
                 raise TypeError(
                     "request got values for both 'fields' and 'body', can only specify one."
                 )
@@ -207,10 +300,27 @@ class RequestMethods:
                     "application/x-www-form-urlencoded",
                 )
 
-            extra_kw["body"] = body
-            extra_kw["headers"] = {"Content-Type": content_type}
+            # extra_kw["body"] = body
+            # extra_kw["headers"] = {"Content-Type": content_type}
+            headers["Content-Type"] = content_type
 
-        extra_kw["headers"].update(headers)
-        extra_kw.update(urlopen_kw)
+        # extra_kw["headers"].update(headers)
+        # extra_kw.update(urlopen_kw)
 
-        return self.urlopen(method, url, **extra_kw)
+        return self.urlopen(
+            method,
+            url,
+            retries=retries,
+            body=body,
+            headers=headers,
+            release_conn=release_conn,
+            preload_content=preload_content,
+            timeout=timeout,
+            redirect=redirect,
+            assert_same_host=assert_same_host,
+            pool_timeout=pool_timeout,
+            chunked=chunked,
+            body_pos=body_pos,
+            decode_content=decode_content,
+            enforce_content_length=enforce_content_length,
+        )

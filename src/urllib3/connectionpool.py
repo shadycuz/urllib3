@@ -548,8 +548,15 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
         release_conn: Optional[bool] = None,
         chunked: bool = False,
         body_pos: Optional[_TYPE_BODY_POSITION] = None,
+<<<<<<< Updated upstream
         **response_kw: Any,
     ) -> BaseHTTPResponse:
+=======
+        preload_content: bool = True,
+        decode_content: bool = True,
+        enforce_content_length: bool = True,
+    ) -> HTTPResponse:
+>>>>>>> Stashed changes
         """
         Get a connection from the pool and perform an HTTP request. This is the
         lowest level call for making a request, so you'll need to specify all
@@ -653,7 +660,7 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
             retries = Retry.from_int(retries, redirect=redirect, default=self.retries)
 
         if release_conn is None:
-            release_conn = response_kw.get("preload_content", True)
+            release_conn = preload_content
 
         # Check host
         if assert_same_host and not self.is_same_host(url):
@@ -749,7 +756,14 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
                 pool=self,
                 connection=response_conn,
                 retries=retries,
+<<<<<<< Updated upstream
                 **response_kw,
+=======
+                response_conn=response_conn,
+                preload_content=preload_content,
+                decode_content=decode_content,
+                enforce_content_length=enforce_content_length,
+>>>>>>> Stashed changes
             )
 
             # Everything went great!
@@ -825,16 +839,18 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
                 method,
                 url,
                 body,
-                headers,
-                retries,
-                redirect,
-                assert_same_host,
+                headers=headers,
+                redirect=redirect,
+                assert_same_host=assert_same_host,
+                retries=retries,
                 timeout=timeout,
                 pool_timeout=pool_timeout,
                 release_conn=release_conn,
                 chunked=chunked,
                 body_pos=body_pos,
-                **response_kw,
+                preload_content=preload_content,
+                decode_content=decode_content,
+                enforce_content_length=enforce_content_length,
             )
 
         # Handle redirect?
@@ -867,7 +883,9 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
                 release_conn=release_conn,
                 chunked=chunked,
                 body_pos=body_pos,
-                **response_kw,
+                preload_content=preload_content,
+                decode_content=decode_content,
+                enforce_content_length=enforce_content_length,
             )
 
         # Check if we should retry the HTTP response.
@@ -897,7 +915,9 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
                 release_conn=release_conn,
                 chunked=chunked,
                 body_pos=body_pos,
-                **response_kw,
+                preload_content=preload_content,
+                decode_content=decode_content,
+                enforce_content_length=enforce_content_length,
             )
 
         return response
